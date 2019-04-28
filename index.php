@@ -45,7 +45,7 @@ $result = $blobClient->listBlobs($containerName, $listBlobsOptions);
  </head>
  <body>
  <h1>Analize Form</h1>
- <p>Upload your picture and click <strong>Submit</strong> to save.</p>
+ <p>Upload your picture and click <strong>Upload</strong> to save it.</p>
  <form class="d-flex justify-content-center" action="index.php" method="post" enctype="multipart/form-data">
 				<input type="file" name="fileToUpload" accept=".jpeg,.jpg,.png" required="">
 				<input type="submit" name="submit" value="Upload">
