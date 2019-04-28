@@ -13,7 +13,7 @@ if (isset($_POST['submit'])) {
 <!DOCTYPE html>
 <html>
 <head>
-	<title>MACD Submission 2!</title>
+	<title>Analize Form!</title>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
 </head>
 <body>
