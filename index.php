@@ -1,6 +1,29 @@
+<?php
+require_once 'vendor/autoload.php';
+require_once "./random_string.php";
+use MicrosoftAzure\Storage\Blob\BlobRestProxy;
+use MicrosoftAzure\Storage\Common\Exceptions\ServiceException;
+use MicrosoftAzure\Storage\Blob\Models\ListBlobsOptions;
+use MicrosoftAzure\Storage\Blob\Models\CreateContainerOptions;
+use MicrosoftAzure\Storage\Blob\Models\PublicAccessType;
+$connectionString = "DefaultEndpointsProtocol=https;AccountName=emuhrezstorage;AccountKey=A/IFJZrWOhBBSHnY/lnTQBxv5iiddw8Q4KErx8CP51+ZUj10EHoZSuTGoT9Ttpykvno/R/TPYYztUW7AsdJdzg==;EndpointSuffix=core.windows.net";
+$containerName = "emuhrez";
+// Create blob client.
+$blobClient = BlobRestProxy::createBlobService($connectionString);
+if (isset($_POST['submit'])) {
+	$fileToUpload = strtolower($_FILES["fileToUpload"]["name"]);
+	$content = fopen($_FILES["fileToUpload"]["tmp_name"], "r");
+	// echo fread($content, filesize($fileToUpload));
+	$blobClient->createBlockBlob($containerName, $fileToUpload, $content);
+	header("Location: analyze.php");
+}
+$listBlobsOptions = new ListBlobsOptions();
+$listBlobsOptions->setPrefix("");
+$result = $blobClient->listBlobs($containerName, $listBlobsOptions);
+?>
 <html>
  <head>
- <Title>Registration Form</Title>
+ <Title>Analize Form</Title>
  <style type="text/css">
  	body { background-color: #fff; border-top: solid 10px #000;
  	    color: #333; font-size: .85em; margin: 20; padding: 20;
@@ -19,71 +42,41 @@
  <h1>Register here!</h1>
  <p>Fill in your name and email address, then click <strong>Submit</strong> to register.</p>
  <form method="post" action="index.php" enctype="multipart/form-data" >
-       Name  <input type="text" name="name" id="name"/></br></br>
-       Email <input type="text" name="email" id="email"/></br></br>
-       Job <input type="text" name="job" id="job"/></br></br>
-       <input type="submit" name="submit" value="Submit" />
-       <input type="submit" name="load_data" value="Load Data" />
+       <input type="file" name="fileToUpload" accept=".jpeg,.jpg,.png" required="">
+	   <input type="submit" name="submit" value="Upload">
  </form>
- <?php
-    $host = "emuhrezdicoding.database.windows.net";
-    $user = "arks";
-    $pass = "Ar160613";
-    $db = "emuhrezdicoding";
-
-    try {
-        $conn = new PDO("sqlsrv:server = $host; Database = $db", $user, $pass);
-        $conn->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-    } catch(Exception $e) {
-        echo "Failed: " . $e;
-    }
-
-    if (isset($_POST['submit'])) {
-        try {
-            $name = $_POST['name'];
-            $email = $_POST['email'];
-            $job = $_POST['job'];
-            $date = date("Y-m-d");
-            // Insert data
-            $sql_insert = "INSERT INTO Registration (name, email, job, date) 
-                        VALUES (?,?,?,?)";
-            $stmt = $conn->prepare($sql_insert);
-            $stmt->bindValue(1, $name);
-            $stmt->bindValue(2, $email);
-            $stmt->bindValue(3, $job);
-            $stmt->bindValue(4, $date);
-            $stmt->execute();
-        } catch(Exception $e) {
-            echo "Failed: " . $e;
-        }
-
-        echo "<h3>Your're registered!</h3>";
-    } else if (isset($_POST['load_data'])) {
-        try {
-            $sql_select = "SELECT * FROM Registration";
-            $stmt = $conn->query($sql_select);
-            $registrants = $stmt->fetchAll(); 
-            if(count($registrants) > 0) {
-                echo "<h2>People who are registered:</h2>";
-                echo "<table>";
-                echo "<tr><th>Name</th>";
-                echo "<th>Email</th>";
-                echo "<th>Job</th>";
-                echo "<th>Date</th></tr>";
-                foreach($registrants as $registrant) {
-                    echo "<tr><td>".$registrant['name']."</td>";
-                    echo "<td>".$registrant['email']."</td>";
-                    echo "<td>".$registrant['job']."</td>";
-                    echo "<td>".$registrant['date']."</td></tr>";
-                }
-                echo "</table>";
-            } else {
-                echo "<h3>No one is currently registered.</h3>";
-            }
-        } catch(Exception $e) {
-            echo "Failed: " . $e;
-        }
-    }
- ?>
+ <br>
+		<h4>Total Files : <?php echo sizeof($result->getBlobs())?></h4>
+		<table class='table table-hover'>
+			<thead>
+				<tr>
+					<th>File Name</th>
+					<th>File URL</th>
+					<th>Action</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php
+				do {
+					foreach ($result->getBlobs() as $blob)
+					{
+						?>
+						<tr>
+							<td><?php echo $blob->getName() ?></td>
+							<td><?php echo $blob->getUrl() ?></td>
+							<td>
+								<form action="computervision.php" method="post">
+									<input type="hidden" name="url" value="<?php echo $blob->getUrl()?>">
+									<input type="submit" name="submit" value="Analyze!" class="btn btn-primary">
+								</form>
+							</td>
+						</tr>
+						<?php
+					}
+					$listBlobsOptions->setContinuationToken($result->getContinuationToken());
+				} while($result->getContinuationToken());
+				?>
+			</tbody>
+		</table>
  </body>
  </html>
